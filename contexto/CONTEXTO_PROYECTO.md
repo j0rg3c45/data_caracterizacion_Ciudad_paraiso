@@ -322,8 +322,10 @@ Hay **dos** versiones: la del **notebook** (completa, interna) y la **pública**
   `contexto/*.md`, `README.md`, y los modelos de referencia `.ili/.uml/.txt`).
 - **Antes de cada commit:** revisar con `git add -A --dry-run` que no se cuele ningún dato
   personal; usar `git status` y nunca `git add` masivo sin verificar.
-- **Flujo de actualización:** tras cada cambio relevante (nuevo script/notebook, ajuste de
-  contexto), hacer commit descriptivo y `git push origin main`.
+- **Flujo de actualización (AUTOMÁTICO):** tras cada cambio relevante (nuevo script/notebook,
+  informe o ajuste de contexto), hacer commit descriptivo y `git push origin main`
+  **automáticamente**, previa verificación con `git add -A --dry-run` de que no se cuele
+  ningún dato personal.
 - Cada integrante conserva su copia local de `data/`; en Colab se sube en sesión.
 
 ---
