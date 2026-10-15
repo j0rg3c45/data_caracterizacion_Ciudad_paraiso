@@ -334,6 +334,68 @@ print("Dentro del polígono:", int(pts["dentro_poligono"].sum()),
       "| Fuera (outliers):", int((~pts["dentro_poligono"]).sum()))
 print(pts["estado_mapa"].value_counts())''')
 
+# --- Celda 6B: vinculación a predios + semáforo por predio ------------------
+md("""## Celda 6B · Vincular encuestas a predios y semáforo por terreno
+
+Asigna cada encuesta a un lote (intersección directa; si no, proximidad ≤15 m en metros
+reales con EPSG:9377) y colorea cada terreno según la **mejor** confianza de sus encuestas:
+🟢 ALTA (intersección) · 🟡 MEDIA (<5 m) · 🟠 BAJA (5-15 m) · ⚪ sin encuesta.""")
+code('''UMBRAL_M, PROX_MEDIA_M = 15.0, 5.0
+ID_PREDIO = CAMPO_PREDIO  # 'NPN'
+COLOR_SEM = {"ALTA": "#2E7D32", "MEDIA": "#F9A825",
+             "BAJA": "#EF6C00", "SIN_ENCUESTA": "#BDBDBD"}
+terr_sem = None
+
+if len(terrenos) and ID_PREDIO and len(pts):
+    pm = pts.to_crs(9377)
+    tm = terrenos.to_crs(9377)[[ID_PREDIO, "geometry"]]
+
+    # 1) intersección directa
+    dj = gpd.sjoin(pm, tm, how="left", predicate="within")
+    dj = dj[~dj.index.duplicated(keep="first")]
+    pm["pred"] = dj[ID_PREDIO]
+    pm["metodo"] = pm["pred"].notna().map({True: "INTERSECCION_DIRECTA", False: None})
+    pm["dist_m"] = pm["pred"].notna().map({True: 0.0, False: None})
+
+    # 2) proximidad con umbral para los no asignados
+    falt = pm[pm["pred"].isna()]
+    if len(falt):
+        near = gpd.sjoin_nearest(falt[["geometry"]], tm, how="left", distance_col="d")
+        near = near[~near.index.duplicated(keep="first")]
+        for i in falt.index:
+            d = float(near.loc[i, "d"])
+            if d <= UMBRAL_M:
+                pm.loc[i, "pred"] = near.loc[i, ID_PREDIO]
+                pm.loc[i, "metodo"] = "PROXIMIDAD_UMBRAL"
+                pm.loc[i, "dist_m"] = round(d, 2)
+            else:
+                pm.loc[i, "metodo"] = "MANUAL_PENDIENTE"
+                pm.loc[i, "dist_m"] = round(d, 2)
+
+    def conf(r):
+        if r["metodo"] == "INTERSECCION_DIRECTA":
+            return "ALTA"
+        if r["metodo"] == "PROXIMIDAD_UMBRAL" and r["dist_m"] is not None and r["dist_m"] < PROX_MEDIA_M:
+            return "MEDIA"
+        return "BAJA"
+    pm["conf"] = pm.apply(conf, axis=1)
+
+    # semáforo por predio = mejor confianza de sus encuestas
+    asig = pm[pm["pred"].notna()]
+    RANGO = {"ALTA": 3, "MEDIA": 2, "BAJA": 1}
+    inv = {v: k for k, v in RANGO.items()}
+    mejor = asig.assign(_r=asig["conf"].map(RANGO)).groupby("pred")["_r"].max()
+    npred = asig.groupby("pred").size()
+
+    terr_sem = terrenos[[ID_PREDIO, "geometry"]].copy()
+    terr_sem["n_encuestas"] = terr_sem[ID_PREDIO].map(npred).fillna(0).astype(int)
+    terr_sem["confianza_predio"] = terr_sem[ID_PREDIO].map(
+        lambda x: inv.get(mejor.get(x), "SIN_ENCUESTA"))
+    terr_sem["color"] = terr_sem["confianza_predio"].map(COLOR_SEM)
+    print("Semáforo por predio:", terr_sem["confianza_predio"].value_counts().to_dict())
+else:
+    print("[AVISO] Sin terrenos o sin puntos: no se calcula el semáforo por predio.")''')
+
 # --- Celda 7: mapa interno --------------------------------------------------
 md("""## Celda 7 · Mapa interactivo — versión INTERNA (uso restringido)
 
@@ -380,6 +442,19 @@ if len(terrenos) and CAMPO_PREDIO:
         tooltip=folium.GeoJsonTooltip(fields=[CAMPO_PREDIO], aliases=["Lote / Predio:"]),
         show=False).add_to(m)
 
+# Predios coloreados por SEMÁFORO de encuesta (capa aparte, encendida por defecto)
+if terr_sem is not None and len(terr_sem):
+    folium.GeoJson(
+        terr_sem.to_json(), name="Predios · semáforo de encuesta",
+        style_function=lambda feat: {
+            "color": "#555", "weight": 0.6,
+            "fillColor": feat["properties"]["color"], "fillOpacity": 0.55},
+        highlight_function=lambda x: {"weight": 2, "fillOpacity": 0.75},
+        tooltip=folium.GeoJsonTooltip(
+            fields=[CAMPO_PREDIO, "confianza_predio", "n_encuestas"],
+            aliases=["Predio:", "Confianza:", "N° encuestas:"]),
+        show=True).add_to(m)
+
 # Red peatonal OSM (try/except: el mapa sale aunque falle la descarga)
 if HAY_OSM and area_proyecto is not None:
     try:
@@ -421,10 +496,15 @@ MiniMap(toggle_display=True, position="bottomleft").add_to(m)
 Fullscreen().add_to(m)
 leyenda = ('<div style="position:fixed;bottom:30px;right:30px;z-index:9999;background:white;'
            'padding:10px 14px;border:1px solid #999;border-radius:6px;font-family:Arial;'
-           f'font-size:12px;color:#000"><b style="color:{AZUL}">Trabajo de campo</b><br>'
+           f'font-size:12px;color:#000"><b style="color:{AZUL}">Puntos de campo</b><br>'
            '<span style="color:green">●</span> Dentro + cruce completo<br>'
            '<span style="color:orange">●</span> Dentro sin caracterización<br>'
-           '<span style="color:red">●</span> Fuera de zona (revisar)</div>')
+           '<span style="color:red">●</span> Fuera de zona (revisar)<br>'
+           f'<b style="color:{AZUL}">Predios (semáforo)</b><br>'
+           '<span style="color:#2E7D32">■</span> ALTA (intersección)<br>'
+           '<span style="color:#F9A825">■</span> MEDIA (&lt;5 m)<br>'
+           '<span style="color:#EF6C00">■</span> BAJA (5-15 m)<br>'
+           '<span style="color:#BDBDBD">■</span> Sin encuesta</div>')
 m.get_root().html.add_child(folium.Element(leyenda))
 folium.LayerControl(collapsed=True).add_to(m)
 # m.save("../output/mapa_interno_ciudad_paraiso.html")

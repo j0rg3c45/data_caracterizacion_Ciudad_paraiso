@@ -118,6 +118,23 @@ pts_m["n_encuestas_en_predio"] = pts_m["id_terreno_asignado"].map(n_por_predio)
 predios_con = set(n_por_predio.index)
 predios_sin = terr_slim[~terr_slim[ID_PREDIO].isin(predios_con)]
 
+# -------------------------------------------- semáforo A NIVEL DE PREDIO
+# Un predio puede tener varias encuestas con confianzas distintas -> toma la MEJOR.
+RANGO = {"ALTA": 3, "MEDIA": 2, "BAJA": 1}
+mejor = (asignadas.assign(_r=asignadas["nivel_confianza"].map(RANGO))
+         .groupby("id_terreno_asignado")["_r"].max())
+inv = {v: k for k, v in RANGO.items()}
+
+terr_sem = terr_slim.copy()
+terr_sem["n_encuestas"] = terr_sem[ID_PREDIO].map(n_por_predio).fillna(0).astype(int)
+terr_sem["confianza_predio"] = terr_sem[ID_PREDIO].map(
+    lambda x: inv.get(mejor.get(x)) if x in predios_con else "SIN_ENCUESTA")
+# color del semáforo para el mapa
+COLOR_SEM = {"ALTA": "#2E7D32", "MEDIA": "#F9A825",
+             "BAJA": "#EF6C00", "SIN_ENCUESTA": "#BDBDBD"}
+terr_sem["color_semaforo"] = terr_sem["confianza_predio"].map(COLOR_SEM)
+terr_sem = terr_sem.to_crs(4326)
+
 # ----------------------------------------------------------------- salida
 salida = pts_m.to_crs(4326)[[
     "id_encuesta", "id_terreno_asignado", "metodo_asignacion",
@@ -129,6 +146,12 @@ GPKG = OUT_DIR / "vinculacion_predios.gpkg"
 salida.to_file(GPKG, layer="encuestas_vinculadas", driver="GPKG")
 predios_sin[[ID_PREDIO, "geometry"]].to_file(GPKG, layer="predios_sin_encuesta", driver="GPKG")
 predios_sin[[ID_PREDIO]].to_csv(OUT_DIR / "predios_sin_encuesta.csv", index=False)
+# capa de predios con semáforo (todos los lotes, coloreados)
+terr_sem[[ID_PREDIO, "n_encuestas", "confianza_predio", "color_semaforo",
+          "geometry"]].to_file(GPKG, layer="predios_semaforo", driver="GPKG")
+# también como GeoJSON para que el notebook la pinte fácil
+terr_sem[[ID_PREDIO, "n_encuestas", "confianza_predio", "color_semaforo",
+          "geometry"]].to_file(OUT_DIR / "predios_semaforo.geojson", driver="GeoJSON")
 
 # ----------------------------------------------------------------- balance
 tot = len(pts_m)
@@ -147,5 +170,8 @@ print(f"Predios con ≥1 encuesta             : {len(predios_con)} de {len(terr_
 print(f"Predios SIN encuesta (cobertura)    : {len(predios_sin)}")
 multi = int((n_por_predio > 1).sum())
 print(f"Predios con MÚLTIPLES encuestas (N:1): {multi}")
-print(f"\nGuardado: {GPKG}  (capas: encuestas_vinculadas, predios_sin_encuesta)")
+print("Semáforo por predio:", terr_sem["confianza_predio"].value_counts().to_dict())
+print(f"\nGuardado: {GPKG}")
+print("  capas: encuestas_vinculadas, predios_sin_encuesta, predios_semaforo")
+print(f"GeoJSON para el mapa: {OUT_DIR / 'predios_semaforo.geojson'}")
 print(f"CSV predios sin encuesta: {OUT_DIR / 'predios_sin_encuesta.csv'}")

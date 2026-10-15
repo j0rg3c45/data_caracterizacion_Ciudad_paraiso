@@ -333,6 +333,13 @@ Nacional) para `sjoin_nearest`, buffers y distancias reales; volver a EPSG:4326 
 [`INTERSECCION_DIRECTA` | `PROXIMIDAD_UMBRAL` | `MANUAL_PENDIENTE`], `distancia_al_predio_m`,
 `nivel_confianza` [`ALTA`|`MEDIA`|`BAJA`], `requiere_visita_campo` (bool).
 
+**Semáforo por predio (capa del mapa):** cada terreno toma la **mejor** confianza de sus
+encuestas y se colorea: 🟢 ALTA `#2E7D32` · 🟡 MEDIA `#F9A825` · 🟠 BAJA `#EF6C00` ·
+⚪ sin encuesta `#BDBDBD`. Resultado: ~112 ALTA, ~81 MEDIA, ~44 BAJA, 620 sin encuesta.
+En el notebook se calcula en la Celda 6B (sin depender de archivos externos) y se pinta como
+capa `Predios · semáforo de encuesta` (encendida por defecto). También se exporta a
+`output/predios_semaforo.geojson` y a la capa `predios_semaforo` del GeoPackage.
+
 > Pendiente: si se consigue un GeoJSON de predios con nomenclatura oficial, la validación 4
 > pasa a comparar dirección declarada vs. dirección del predio (no solo barrio).
 
