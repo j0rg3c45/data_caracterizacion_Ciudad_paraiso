@@ -199,6 +199,11 @@ geo = leer_hoja("Georreferenciacion")    # georreferenciación y trabajo de camp
 poligono = leer_geo("poligono")
 terrenos = leer_geo("terrenos")
 
+# Simplifica la geometría de los lotes (857 polígonos) para que el mapa renderice
+# rápido en Colab: reduce vértices sin cambiar la forma visible (~1 m de tolerancia).
+if len(terrenos):
+    terrenos["geometry"] = terrenos.geometry.simplify(0.00001, preserve_topology=True)
+
 print("Caracterización:", carac.shape, "| Georreferenciación:", geo.shape)
 print("Polígono:", len(poligono), "feats | Terrenos:", len(terrenos), "lotes")
 
@@ -207,6 +212,9 @@ if len(terrenos.columns):
     CAMPO_PREDIO = next(
         (c for c in ["NPN", "IDPREDIO", "ID_PREDIO", "PREDIO", "TERRENO", "OBJECTID"]
          if c in terrenos.columns), terrenos.columns[0])
+    # Deja SOLO el identificador + geometría: aligera el to_json() del mapa
+    # (si no, se serializan ~20 columnas por cada uno de los 857 lotes).
+    terrenos = terrenos[[CAMPO_PREDIO, "geometry"]].copy()
 else:
     CAMPO_PREDIO = None
 print("Campo identificador de lote:", CAMPO_PREDIO)''')
