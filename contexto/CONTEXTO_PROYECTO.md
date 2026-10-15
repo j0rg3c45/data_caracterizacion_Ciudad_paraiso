@@ -301,6 +301,41 @@ Hay **dos** versiones: la del **notebook** (completa, interna) y la **pública**
 > (BLOQUE 5 del script actual) es **solo para uso interno**; cualquier versión publicable debe
 > pasar por la regla de privacidad 8.4.
 
+### 8.5 Metodología de vinculación encuesta ↔ predio (terrenos)
+Marco reproducible para asignar cada punto georreferenciado a un predio de la capa
+`TERRENOS_U_2024` (857 lotes). Identificador de predio: **`NPN`** (código catastral, 24
+dígitos en Cali) o `IDPREDIO`.
+
+**Reglas de asignación jerárquica:**
+1. **Intersección directa (Point-in-Polygon):** si el punto cae dentro de un terreno, se le
+   asigna su `NPN`. `metodo = INTERSECCION_DIRECTA`, `distancia_al_predio_m = 0`.
+2. **Cardinalidad:**
+   - **N a 1** (varias encuestas en un mismo lote: inquilinatos, PH): se modela como relación
+     (una tabla de encuestas por `NPN`); se cuenta `n_encuestas_en_predio`.
+   - **0 a 1** (lote sin encuestas): queda listado para diagnóstico de cobertura predial.
+3. **Proximidad con umbral (puntos frontera / error GPS):** si el punto no cae en ningún
+   predio, se asigna al más cercano con `sjoin_nearest`. Umbral máximo **15 m**. Si supera el
+   umbral → `No_Asignable_Requiere_Revision`. `metodo = PROXIMIDAD_UMBRAL`, se registra
+   `distancia_al_predio_m`.
+4. **Validación cruzada (semáforo de confianza):** ⚠️ **La validación alfanumérica NO es
+   viable con los insumos actuales:** el GeoJSON de terrenos **no trae dirección** y su campo
+   `BARRIO` son **códigos** (`06`,`07`,`09`,`10`), no nombres, incomparables con el barrio de
+   la encuesta (`El Calvario`, `Sucre`...). Por eso el semáforo se basa en **método + distancia**:
+   - **ALTA:** intersección directa (el punto cae dentro del lote).
+   - **MEDIA:** proximidad < 5 m.
+   - **BAJA:** proximidad ≥ 5 m, o huérfana (requiere revisión).
+
+**Mediciones en metros:** reproyectar ambas capas a **EPSG:9377** (MAGNA-SIRGAS Origen
+Nacional) para `sjoin_nearest`, buffers y distancias reales; volver a EPSG:4326 para visualizar.
+
+**Salida normalizada** (`output/vinculacion_predios.gpkg` + resumen): `id_encuesta`
+(`numero_documento`), `id_terreno_asignado` (`NPN`), `metodo_asignacion`
+[`INTERSECCION_DIRECTA` | `PROXIMIDAD_UMBRAL` | `MANUAL_PENDIENTE`], `distancia_al_predio_m`,
+`nivel_confianza` [`ALTA`|`MEDIA`|`BAJA`], `requiere_visita_campo` (bool).
+
+> Pendiente: si se consigue un GeoJSON de predios con nomenclatura oficial, la validación 4
+> pasa a comparar dirección declarada vs. dirección del predio (no solo barrio).
+
 ---
 
 ## 9. Flujo de trabajo acordado
@@ -364,3 +399,5 @@ Mismo patrón que los notebooks ITT (`Itt_repos_cali`), adaptado a este repo **p
 | 2026-10-15  | Notebook del mapa interactivo: `notebooks/01_mapa_interactivo_ciudad_paraiso.ipynb` (generador `scripts/build_notebook_mapa.py`). Validado en local: 741 cruces, 368 dentro / 64 fuera. |
 | 2026-10-15  | Notebook: detección automática Colab/Local y rutas robustas (busca `data/` sin depender del cwd). |
 | 2026-10-15  | Repo Git inicializado con `.gitignore` que excluye datos personales; `data/` y `output/` fuera del control de versiones. |
+| 2026-10-15  | ZIP de datos al repo privado + Colab lee por clonado sparse (patrón ITT). Mapa validado en Colab. |
+| 2026-10-15  | Metodología de vinculación encuesta↔predio (`scripts/vincular_encuestas_predios.py`). Validado: 160 intersección / 224 proximidad / 48 huérfanas; 236 de 857 predios con encuesta. Validación por barrio NO viable (GeoJSON sin dirección, barrio en códigos). |
