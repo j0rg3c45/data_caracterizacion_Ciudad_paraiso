@@ -38,15 +38,22 @@ Point-in-Polygon → mapa interactivo (interno y público).
 
 # --- Celda 1: instalación ---------------------------------------------------
 md("## Celda 1 · Instalación de dependencias (solo Google Colab)")
-code('''# Instala dependencias SOLO en Google Colab (en local ya están en el entorno uv).
+code('''# Dependencias. En Colab, geopandas/shapely/pyproj YA vienen preinstalados;
+# reinstalarlos es lo que hace lenta esta celda, así que solo se instala lo que falte.
+# osmnx NO se instala aquí (es pesado y solo lo usa la capa opcional de red peatonal).
 try:
     import google.colab  # noqa
-    import subprocess, sys
-    print("Instalando dependencias en Colab (puede tardar 1-2 min)...")
-    subprocess.run([sys.executable, "-m", "pip", "-q", "install",
-                    "geopandas", "folium", "mapclassify", "openpyxl",
-                    "shapely", "pyproj", "osmnx"], check=False)
-    print("Dependencias listas.")
+    import importlib.util as _u, subprocess, sys
+    faltan = [p for p, m in [("geopandas", "geopandas"), ("folium", "folium"),
+                             ("mapclassify", "mapclassify"), ("openpyxl", "openpyxl")]
+              if _u.find_spec(m) is None]
+    if faltan:
+        print("Instalando lo que falta:", faltan)
+        subprocess.run([sys.executable, "-m", "pip", "-q", "install", *faltan], check=False)
+    else:
+        print("Dependencias ya disponibles en Colab (nada que instalar).")
+    # osmnx opcional: descomenta la línea de abajo SOLO si quieres la red peatonal.
+    # subprocess.run([sys.executable, "-m", "pip", "-q", "install", "osmnx"], check=False)
 except ImportError:
     print("Entorno local: se usan las librerías ya instaladas.")''')
 
