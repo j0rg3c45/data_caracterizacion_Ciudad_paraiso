@@ -39,49 +39,55 @@ Point-in-Polygon → mapa interactivo (interno y público).
 # --- Celda 1: instalación ---------------------------------------------------
 md("""## Celda 1 · Dependencias y datos (solo Google Colab)
 
-Instala lo que falte y descarga los insumos desde el repositorio **privado**
-(ZIP en `data/_zip/`), que luego descomprime en `/content/data_cp/`. Pedirá un
-**token de GitHub** con permiso de lectura del repo (no se guarda ni se imprime).""")
-code('''# Dependencias. En Colab, geopandas/shapely/pyproj YA vienen preinstalados;
-# reinstalarlos es lo que hace lenta esta celda, así que solo se instala lo que falte.
-# osmnx NO se instala aquí (es pesado y solo lo usa la capa opcional de red peatonal).
+Instala solo lo que falte (no reinstala geopandas: ya viene en Colab). **No bloquea.**""")
+code('''# Instala SOLO lo que falte en Colab. En local no hace nada.
 try:
     import google.colab  # noqa
     import importlib.util as _u, subprocess, sys
-    faltan = [p for p, m in [("geopandas", "geopandas"), ("folium", "folium"),
-                             ("mapclassify", "mapclassify"), ("openpyxl", "openpyxl")]
+    faltan = [p for p, m in [("folium", "folium"), ("mapclassify", "mapclassify"),
+                             ("openpyxl", "openpyxl")]
               if _u.find_spec(m) is None]
     if faltan:
-        print("Instalando lo que falta:", faltan)
+        print("Instalando:", faltan)
         subprocess.run([sys.executable, "-m", "pip", "-q", "install", *faltan], check=False)
     else:
-        print("Dependencias ya disponibles en Colab (nada que instalar).")
-    # osmnx opcional: descomenta la línea de abajo SOLO si quieres la red peatonal.
-    # subprocess.run([sys.executable, "-m", "pip", "-q", "install", "osmnx"], check=False)
-
-    # --- Traer los datos desde el repo PRIVADO y descomprimir el ZIP ----------
-    # El repo es privado -> se pide un token de GitHub (fine-grained o classic con
-    # permiso de lectura al repo). No se imprime ni se guarda.
-    import os, zipfile, getpass, urllib.request
-    ZIP_LOCAL = "/content/ciudad_paraiso_data.zip"
-    DATA_DIR = "/content/data_cp"
-    if not os.path.exists(ZIP_LOCAL):
-        tok = getpass.getpass("Token de GitHub (lectura del repo privado): ").strip()
-        url = ("https://" + tok + "@raw.githubusercontent.com/"
-               "j0rg3c45/data_caracterizacion_Ciudad_paraiso/main/"
-               "data/_zip/ciudad_paraiso_data.zip")
-        try:
-            urllib.request.urlretrieve(url, ZIP_LOCAL)
-            print("ZIP descargado del repo.")
-        except Exception as e:
-            print("No se pudo descargar el ZIP:", e)
-    if os.path.exists(ZIP_LOCAL):
-        os.makedirs(DATA_DIR, exist_ok=True)
-        with zipfile.ZipFile(ZIP_LOCAL) as z:
-            z.extractall(DATA_DIR)
-        print("Datos descomprimidos en", DATA_DIR, "->", os.listdir(DATA_DIR))
+        print("Dependencias ya disponibles (nada que instalar).")
 except ImportError:
-    print("Entorno local: se usan las librerías ya instaladas.")''')
+    print("Entorno local: librerías ya instaladas.")''')
+
+# --- Celda 1B: datos desde el repo privado ----------------------------------
+md("""## Celda 1B · Descargar los datos (solo Google Colab)
+
+**EDITA la variable `GITHUB_TOKEN`** y pega tu token de GitHub (lectura del repo
+privado). No usa prompts bloqueantes; la descarga tiene timeout de 30 s.""")
+code('''# >>> PEGA AQUÍ TU TOKEN DE GITHUB (entre comillas) <<<
+GITHUB_TOKEN = ""   # p.ej. "github_pat_xxx" o "ghp_xxx"
+
+try:
+    import google.colab  # noqa
+    import os, zipfile, urllib.request
+    DATA_DIR = "/content/data_cp"
+    ZIP_LOCAL = "/content/ciudad_paraiso_data.zip"
+    REPO = "j0rg3c45/data_caracterizacion_Ciudad_paraiso"
+    RUTA_ZIP = "data/_zip/ciudad_paraiso_data.zip"
+
+    if not GITHUB_TOKEN.strip():
+        print("⚠️ Falta el token: edita GITHUB_TOKEN arriba y vuelve a ejecutar esta celda.")
+    else:
+        url = (f"https://{GITHUB_TOKEN.strip()}@raw.githubusercontent.com/"
+               f"{REPO}/main/{RUTA_ZIP}")
+        try:
+            import socket; socket.setdefaulttimeout(30)
+            urllib.request.urlretrieve(url, ZIP_LOCAL)
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with zipfile.ZipFile(ZIP_LOCAL) as z:
+                z.extractall(DATA_DIR)
+            print("Datos listos en", DATA_DIR, "->", os.listdir(DATA_DIR))
+        except Exception as e:
+            print("No se pudo descargar/descomprimir:", repr(e))
+            print("Verifica que el token tenga permiso de lectura al repo privado.")
+except ImportError:
+    print("Entorno local: no se descarga nada (se usa data/ local).")''')
 
 # --- Celda 2: imports -------------------------------------------------------
 md("## Celda 2 · Imports y configuración")
