@@ -85,21 +85,48 @@ NOMBRES = {
 }
 
 if EN_COLAB:
-    # En Colab no existe el disco local: hay que SUBIR los 3 archivos.
-    # (Alternativa: montar Google Drive y apuntar PATHS a la carpeta del Drive.)
-    from google.colab import files
     import os
-    print("\\nSube estos 3 archivos:")
-    for n in NOMBRES.values():
-        print("   -", n)
-    subidos = files.upload()  # abre el selector de archivos
-    # Mapea por nombre de archivo (no depende del orden de subida).
-    disponibles = set(os.listdir("."))
+    # --- Opción recomendada: leer desde Google Drive (sin re-subir nada) ------
+    # Sube la carpeta data/ a tu Drive una sola vez; aquí se monta y se buscan
+    # los 3 archivos por NOMBRE en todo el Drive (no importa la subcarpeta).
     PATHS = {}
+    try:
+        from google.colab import drive
+        drive.mount("/content/drive")
+        raiz_drive = "/content/drive/MyDrive"
+        # índice nombre -> primera ruta encontrada
+        encontrados = {}
+        objetivo = set(NOMBRES.values())
+        for base, _dirs, archivos in os.walk(raiz_drive):
+            for a in archivos:
+                if a in objetivo and a not in encontrados:
+                    encontrados[a] = os.path.join(base, a)
+            if len(encontrados) == len(objetivo):
+                break
+        for clave, nombre in NOMBRES.items():
+            if nombre in encontrados:
+                PATHS[clave] = encontrados[nombre]
+                print(f"[DRIVE] {nombre} -> {encontrados[nombre]}")
+            else:
+                print(f"[DRIVE] No se encontró {nombre} en el Drive.")
+    except Exception as e:
+        print("No se pudo montar/leer Drive:", e)
+
+    # --- Respaldo: subir manualmente los que falten --------------------------
+    faltan = [NOMBRES[k] for k in NOMBRES if k not in PATHS]
+    if faltan:
+        from google.colab import files
+        print("\\nFaltan archivos; súbelos manualmente:")
+        for n in faltan:
+            print("   -", n)
+        files.upload()
+        disponibles = set(os.listdir("."))
+        for clave, nombre in NOMBRES.items():
+            if clave not in PATHS and nombre in disponibles:
+                PATHS[clave] = nombre
+    # Rellena los que sigan faltando (la carga avisará y seguirá con capa vacía).
     for clave, nombre in NOMBRES.items():
-        PATHS[clave] = nombre if nombre in disponibles else nombre
-        if nombre not in disponibles:
-            print(f"[OJO] No se subió '{nombre}'. La capa/fuente quedará vacía.")
+        PATHS.setdefault(clave, nombre)
 else:
     # Local: localiza la carpeta data/ subiendo desde el cwd (sirve desde
     # notebooks/ o desde la raíz del proyecto).
