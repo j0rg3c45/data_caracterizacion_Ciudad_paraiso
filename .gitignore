@@ -1,0 +1,50 @@
+# =============================================================================
+# .gitignore — Proyecto Caracterización ciudadana Ciudad Paraíso
+# =============================================================================
+# REGLA DE GOBIERNO DE DATOS: los insumos contienen datos personales de acceso
+# restringido (documento, nombre, teléfono, correo, dirección). NO se versionan.
+# Cada integrante mantiene su copia local de data/. En Colab se suben en sesión.
+# =============================================================================
+
+# --- Datos sensibles: NUNCA al repositorio ----------------------------------
+data/
+output/
+
+# Por si quedan sueltos fuera de esas carpetas
+*.xlsx
+*.xls
+*.csv
+*.rar
+*.geojson
+*.shp
+*.dbf
+*.shx
+*.sbn
+*.sbx
+*.cpg
+*.prj
+*.qmd
+*.pdf
+*.docx
+*.html
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# --- Caché del agente / notebooks -------------------------------------------
+cache/
+**/cache/
+_tmp_*
+*_tmp.py
+
+# --- Sistema / editores -----------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
