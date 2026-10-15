@@ -134,12 +134,39 @@ NOMBRES = {
 }
 
 if EN_COLAB:
-    import os
-    # La Celda 1 descargó el ZIP del repo privado y lo descomprimió aquí:
+    import os, zipfile, glob
     DATA_DIR = "/content/data_cp"
+
+    # Respaldo 1: si faltan los archivos pero el ZIP ya fue clonado, descomprímelo.
+    zip_clonado = "/content/data_caracterizacion/data/_zip/ciudad_paraiso_data.zip"
+    faltan_dir = not all(os.path.exists(os.path.join(DATA_DIR, n))
+                         for n in NOMBRES.values())
+    if faltan_dir and os.path.exists(zip_clonado):
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with zipfile.ZipFile(zip_clonado) as z:
+            z.extractall(DATA_DIR)
+        print("Descomprimido desde el repo clonado.")
+
     PATHS = {clave: os.path.join(DATA_DIR, nombre) for clave, nombre in NOMBRES.items()}
+
+    # Respaldo 2: si aún falta alguno, búscalo por nombre en /content.
+    for clave, nombre in NOMBRES.items():
+        if not os.path.exists(PATHS[clave]):
+            hits = glob.glob(f"/content/**/{nombre}", recursive=True)
+            if hits:
+                PATHS[clave] = hits[0]
+
+    # Diagnóstico claro
+    print("Contenido de", DATA_DIR, ":",
+          os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else "(no existe)")
+    todo_ok = True
     for clave, ruta in PATHS.items():
-        print(f"[{clave}]", ruta, "OK" if os.path.exists(ruta) else "-> NO ENCONTRADO")
+        ok = os.path.exists(ruta)
+        todo_ok = todo_ok and ok
+        print(f"[{clave}]", ruta, "OK" if ok else "-> NO ENCONTRADO")
+    if not todo_ok:
+        print("\\n⚠️ Faltan archivos. Vuelve a la Celda 1B, pega tu token en "
+              "GITHUB_TOKEN y ejecútala ANTES de esta celda.")
 else:
     # Local: localiza la carpeta data/ subiendo desde el cwd (sirve desde
     # notebooks/ o desde la raíz del proyecto).
