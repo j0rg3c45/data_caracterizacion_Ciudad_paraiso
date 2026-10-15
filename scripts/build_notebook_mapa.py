@@ -37,7 +37,11 @@ Point-in-Polygon → mapa interactivo (interno y público).
 > personales (regla de privacidad).""")
 
 # --- Celda 1: instalación ---------------------------------------------------
-md("## Celda 1 · Instalación de dependencias (solo Google Colab)")
+md("""## Celda 1 · Dependencias y datos (solo Google Colab)
+
+Instala lo que falte y descarga los insumos desde el repositorio **privado**
+(ZIP en `data/_zip/`), que luego descomprime en `/content/data_cp/`. Pedirá un
+**token de GitHub** con permiso de lectura del repo (no se guarda ni se imprime).""")
 code('''# Dependencias. En Colab, geopandas/shapely/pyproj YA vienen preinstalados;
 # reinstalarlos es lo que hace lenta esta celda, así que solo se instala lo que falte.
 # osmnx NO se instala aquí (es pesado y solo lo usa la capa opcional de red peatonal).
@@ -54,6 +58,28 @@ try:
         print("Dependencias ya disponibles en Colab (nada que instalar).")
     # osmnx opcional: descomenta la línea de abajo SOLO si quieres la red peatonal.
     # subprocess.run([sys.executable, "-m", "pip", "-q", "install", "osmnx"], check=False)
+
+    # --- Traer los datos desde el repo PRIVADO y descomprimir el ZIP ----------
+    # El repo es privado -> se pide un token de GitHub (fine-grained o classic con
+    # permiso de lectura al repo). No se imprime ni se guarda.
+    import os, zipfile, getpass, urllib.request
+    ZIP_LOCAL = "/content/ciudad_paraiso_data.zip"
+    DATA_DIR = "/content/data_cp"
+    if not os.path.exists(ZIP_LOCAL):
+        tok = getpass.getpass("Token de GitHub (lectura del repo privado): ").strip()
+        url = ("https://" + tok + "@raw.githubusercontent.com/"
+               "j0rg3c45/data_caracterizacion_Ciudad_paraiso/main/"
+               "data/_zip/ciudad_paraiso_data.zip")
+        try:
+            urllib.request.urlretrieve(url, ZIP_LOCAL)
+            print("ZIP descargado del repo.")
+        except Exception as e:
+            print("No se pudo descargar el ZIP:", e)
+    if os.path.exists(ZIP_LOCAL):
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with zipfile.ZipFile(ZIP_LOCAL) as z:
+            z.extractall(DATA_DIR)
+        print("Datos descomprimidos en", DATA_DIR, "->", os.listdir(DATA_DIR))
 except ImportError:
     print("Entorno local: se usan las librerías ya instaladas.")''')
 
@@ -93,47 +119,11 @@ NOMBRES = {
 
 if EN_COLAB:
     import os
-    # --- Opción recomendada: leer desde Google Drive (sin re-subir nada) ------
-    # Sube la carpeta data/ a tu Drive una sola vez; aquí se monta y se buscan
-    # los 3 archivos por NOMBRE en todo el Drive (no importa la subcarpeta).
-    PATHS = {}
-    try:
-        from google.colab import drive
-        drive.mount("/content/drive")
-        raiz_drive = "/content/drive/MyDrive"
-        # índice nombre -> primera ruta encontrada
-        encontrados = {}
-        objetivo = set(NOMBRES.values())
-        for base, _dirs, archivos in os.walk(raiz_drive):
-            for a in archivos:
-                if a in objetivo and a not in encontrados:
-                    encontrados[a] = os.path.join(base, a)
-            if len(encontrados) == len(objetivo):
-                break
-        for clave, nombre in NOMBRES.items():
-            if nombre in encontrados:
-                PATHS[clave] = encontrados[nombre]
-                print(f"[DRIVE] {nombre} -> {encontrados[nombre]}")
-            else:
-                print(f"[DRIVE] No se encontró {nombre} en el Drive.")
-    except Exception as e:
-        print("No se pudo montar/leer Drive:", e)
-
-    # --- Respaldo: subir manualmente los que falten --------------------------
-    faltan = [NOMBRES[k] for k in NOMBRES if k not in PATHS]
-    if faltan:
-        from google.colab import files
-        print("\\nFaltan archivos; súbelos manualmente:")
-        for n in faltan:
-            print("   -", n)
-        files.upload()
-        disponibles = set(os.listdir("."))
-        for clave, nombre in NOMBRES.items():
-            if clave not in PATHS and nombre in disponibles:
-                PATHS[clave] = nombre
-    # Rellena los que sigan faltando (la carga avisará y seguirá con capa vacía).
-    for clave, nombre in NOMBRES.items():
-        PATHS.setdefault(clave, nombre)
+    # La Celda 1 descargó el ZIP del repo privado y lo descomprimió aquí:
+    DATA_DIR = "/content/data_cp"
+    PATHS = {clave: os.path.join(DATA_DIR, nombre) for clave, nombre in NOMBRES.items()}
+    for clave, ruta in PATHS.items():
+        print(f"[{clave}]", ruta, "OK" if os.path.exists(ruta) else "-> NO ENCONTRADO")
 else:
     # Local: localiza la carpeta data/ subiendo desde el cwd (sirve desde
     # notebooks/ o desde la raíz del proyecto).

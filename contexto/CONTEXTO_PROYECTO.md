@@ -316,10 +316,15 @@ Hay **dos** versiones: la del **notebook** (completa, interna) y la **pública**
 ### 9.1 Repositorio Git y versionado
 - **Repo remoto:** `https://github.com/j0rg3c45/data_caracterizacion_Ciudad_paraiso.git`
   (origin, rama `main`). **Visibilidad: PRIVADO.**
-- **REGLA CRÍTICA:** `data/` y `output/` **NO se versionan** (contienen datos personales).
+- **REGLA:** `data/` y `output/` **NO se versionan** (contienen datos personales).
   El `.gitignore` los excluye, junto con `*.xlsx/*.pdf/*.geojson/*.docx/*.rar/*.shp...`,
-  caché y temporales. El repo lleva **solo código y documentación** (`scripts/`, `notebooks/`,
-  `contexto/*.md`, `README.md`, y los modelos de referencia `.ili/.uml/.txt`).
+  caché y temporales. El repo lleva código, documentación y los modelos de referencia.
+- **EXCEPCIÓN AUTORIZADA (decisión del usuario, 2026-10-15):** se versiona
+  `data/_zip/ciudad_paraiso_data.zip` (Excel + 2 GeoJSON) para consumirlo desde Colab.
+  ⚠️ **Contiene datos personales** → el repositorio **DEBE permanecer PRIVADO**. Si alguna vez
+  se hace público, hay que purgar ese archivo del historial de Git primero.
+  En Colab, la Celda 1 descarga el ZIP del repo (pide token de GitHub) y lo descomprime en
+  `/content/data_cp/`; así se evita el `files.upload()` lento y el montaje de Drive.
 - **Antes de cada commit:** revisar con `git add -A --dry-run` que no se cuele ningún dato
   personal; usar `git status` y nunca `git add` masivo sin verificar.
 - **Flujo de actualización (AUTOMÁTICO):** tras cada cambio relevante (nuevo script/notebook,

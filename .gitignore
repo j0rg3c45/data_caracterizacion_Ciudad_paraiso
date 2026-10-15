@@ -7,8 +7,15 @@
 # =============================================================================
 
 # --- Datos sensibles: NUNCA al repositorio ----------------------------------
-data/
+# Se excluye TODO el contenido de data/ ... (reglas con /* para poder exceptuar)
+data/*
 output/
+
+# EXCEPCIÓN (autorizada): carpeta data/_zip con el ZIP de insumos para Colab.
+# ⚠️ Contiene datos personales. El repositorio DEBE permanecer PRIVADO.
+!data/_zip/
+data/_zip/*
+!data/_zip/ciudad_paraiso_data.zip
 
 # Por si quedan sueltos fuera de esas carpetas
 *.xlsx
