@@ -315,7 +315,7 @@ Hay **dos** versiones: la del **notebook** (completa, interna) y la **pública**
 
 ### 9.1 Repositorio Git y versionado
 - **Repo remoto:** `https://github.com/j0rg3c45/data_caracterizacion_Ciudad_paraiso.git`
-  (origin, rama `main`).
+  (origin, rama `main`). **Visibilidad: PRIVADO.**
 - **REGLA CRÍTICA:** `data/` y `output/` **NO se versionan** (contienen datos personales).
   El `.gitignore` los excluye, junto con `*.xlsx/*.pdf/*.geojson/*.docx/*.rar/*.shp...`,
   caché y temporales. El repo lleva **solo código y documentación** (`scripts/`, `notebooks/`,
