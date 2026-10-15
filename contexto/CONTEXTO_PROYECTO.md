@@ -323,8 +323,21 @@ Hay **dos** versiones: la del **notebook** (completa, interna) y la **pública**
   `data/_zip/ciudad_paraiso_data.zip` (Excel + 2 GeoJSON) para consumirlo desde Colab.
   ⚠️ **Contiene datos personales** → el repositorio **DEBE permanecer PRIVADO**. Si alguna vez
   se hace público, hay que purgar ese archivo del historial de Git primero.
-  En Colab, la Celda 1 descarga el ZIP del repo (pide token de GitHub) y lo descomprime en
-  `/content/data_cp/`; así se evita el `files.upload()` lento y el montaje de Drive.
+
+### 9.2 Conexión Colab ↔ Git (patrón ITT)
+Mismo patrón que los notebooks ITT (`Itt_repos_cali`), adaptado a este repo **privado**:
+- **Colab lee el repo por CLONADO SPARSE (solo lectura).** El notebook **NO escribe al Git.**
+  - Celda 1B: `shutil.rmtree(REPO_PATH)` (borra copia previa) + `git clone --depth 1
+    --filter=blob:none --sparse <url> <path>` + `git sparse-checkout set data/_zip`.
+  - Optimizaciones: `--depth 1` (sin historia), `--filter=blob:none` (blobs bajo demanda),
+    `--sparse` (solo las carpetas de `SPARSE_DIRS`). Baja un clon mínimo, no todo el repo.
+  - Como el repo es privado, el token va embebido en la URL de clonado
+    (`https://<token>@github.com/...`). Es de lectura; el token se borra de la celda al terminar.
+  - El ZIP clonado se descomprime en `/content/data_cp/` y de ahí leen las celdas.
+- **La escritura al Git la hacemos SOLO desde local:** editar/ejecutar → `git add` (archivos
+  específicos) → `git commit` → `git push origin main`. Nunca desde el notebook.
+- Ciclo: Colab (clona sparse, lee) → genera mapas/HTML → se traen a local → local (edita,
+  ejecuta) → add/commit/push → GitHub (origin/main).
 - **Antes de cada commit:** revisar con `git add -A --dry-run` que no se cuele ningún dato
   personal; usar `git status` y nunca `git add` masivo sin verificar.
 - **Flujo de actualización (AUTOMÁTICO):** tras cada cambio relevante (nuevo script/notebook,

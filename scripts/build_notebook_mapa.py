@@ -55,39 +55,49 @@ try:
 except ImportError:
     print("Entorno local: librerías ya instaladas.")''')
 
-# --- Celda 1B: datos desde el repo privado ----------------------------------
-md("""## Celda 1B · Descargar los datos (solo Google Colab)
+# --- Celda 1B: clonado sparse del repo (patrón ITT) -------------------------
+md("""## Celda 1B · Clonar el repo y traer los datos (solo Google Colab)
 
-**EDITA la variable `GITHUB_TOKEN`** y pega tu token de GitHub (lectura del repo
-privado). No usa prompts bloqueantes; la descarga tiene timeout de 30 s.""")
-code('''# >>> PEGA AQUÍ TU TOKEN DE GITHUB (entre comillas) <<<
+Patrón ITT: **clonado sparse** de solo lo necesario (rápido, no baja todo el repo).
+El repositorio es **privado**, así que pega tu token de GitHub en `GITHUB_TOKEN`
+(permiso de lectura). El clon es de solo lectura: el notebook **no escribe al repo**.""")
+code('''# >>> PEGA AQUÍ TU TOKEN DE GITHUB (lectura del repo privado) <<<
 GITHUB_TOKEN = ""   # p.ej. "github_pat_xxx" o "ghp_xxx"
 
+# ¿Estamos en Colab? (no importar google.colab dentro del try principal)
 try:
     import google.colab  # noqa
-    import os, zipfile, urllib.request
-    DATA_DIR = "/content/data_cp"
-    ZIP_LOCAL = "/content/ciudad_paraiso_data.zip"
-    REPO = "j0rg3c45/data_caracterizacion_Ciudad_paraiso"
-    RUTA_ZIP = "data/_zip/ciudad_paraiso_data.zip"
-
-    if not GITHUB_TOKEN.strip():
-        print("⚠️ Falta el token: edita GITHUB_TOKEN arriba y vuelve a ejecutar esta celda.")
-    else:
-        url = (f"https://{GITHUB_TOKEN.strip()}@raw.githubusercontent.com/"
-               f"{REPO}/main/{RUTA_ZIP}")
-        try:
-            import socket; socket.setdefaulttimeout(30)
-            urllib.request.urlretrieve(url, ZIP_LOCAL)
-            os.makedirs(DATA_DIR, exist_ok=True)
-            with zipfile.ZipFile(ZIP_LOCAL) as z:
-                z.extractall(DATA_DIR)
-            print("Datos listos en", DATA_DIR, "->", os.listdir(DATA_DIR))
-        except Exception as e:
-            print("No se pudo descargar/descomprimir:", repr(e))
-            print("Verifica que el token tenga permiso de lectura al repo privado.")
+    _EN_COLAB = True
 except ImportError:
-    print("Entorno local: no se descarga nada (se usa data/ local).")''')
+    _EN_COLAB = False
+
+if not _EN_COLAB:
+    print("Entorno local: no se clona nada (se usa data/ local).")
+elif not GITHUB_TOKEN.strip():
+    print("⚠️ Falta el token: edita GITHUB_TOKEN arriba y re-ejecuta esta celda.")
+else:
+    import os, shutil, zipfile, subprocess
+    REPO_PATH = "/content/data_caracterizacion"
+    SPARSE_DIRS = ["data/_zip"]          # solo la carpeta del ZIP (clon mínimo)
+    DATA_DIR = "/content/data_cp"
+    ZIP_EN_REPO = os.path.join(REPO_PATH, "data", "_zip", "ciudad_paraiso_data.zip")
+    REPO_URL = (f"https://{GITHUB_TOKEN.strip()}@github.com/"
+                "j0rg3c45/data_caracterizacion_Ciudad_paraiso.git")
+    try:
+        if os.path.exists(REPO_PATH):          # borra copia previa (evita datos viejos)
+            shutil.rmtree(REPO_PATH)
+        # Clonado superficial + sparse (solo baja lo de SPARSE_DIRS).
+        subprocess.run(["git", "clone", "--depth", "1", "--filter=blob:none",
+                        "--sparse", REPO_URL, REPO_PATH], check=True)
+        subprocess.run(["git", "-C", REPO_PATH, "sparse-checkout", "set",
+                        *SPARSE_DIRS], check=True)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with zipfile.ZipFile(ZIP_EN_REPO) as z:
+            z.extractall(DATA_DIR)
+        print("Repo clonado (sparse) y datos listos en", DATA_DIR,
+              "->", os.listdir(DATA_DIR))
+    except subprocess.CalledProcessError as e:
+        print("Fallo el clonado:", e, "\\nRevisa el token (lectura del repo privado).")''')
 
 # --- Celda 2: imports -------------------------------------------------------
 md("## Celda 2 · Imports y configuración")
