@@ -55,16 +55,12 @@ try:
 except ImportError:
     print("Entorno local: librerías ya instaladas.")''')
 
-# --- Celda 1B: clonado sparse del repo (patrón ITT) -------------------------
+# --- Celda 1B: clonado sparse del repo (patrón ITT, repo público) -----------
 md("""## Celda 1B · Clonar el repo y traer los datos (solo Google Colab)
 
-Patrón ITT: **clonado sparse** de solo lo necesario (rápido, no baja todo el repo).
-El repositorio es **privado**, así que pega tu token de GitHub en `GITHUB_TOKEN`
-(permiso de lectura). El clon es de solo lectura: el notebook **no escribe al repo**.""")
-code('''# >>> PEGA AQUÍ TU TOKEN DE GITHUB (lectura del repo privado) <<<
-GITHUB_TOKEN = ""   # p.ej. "github_pat_xxx" o "ghp_xxx"
-
-# ¿Estamos en Colab? (no importar google.colab dentro del try principal)
+Patrón ITT: **clonado sparse** del repo **público** (rápido, sin token, no baja todo el repo).
+El clon es de solo lectura: el notebook **no escribe al repo**.""")
+code('''# ¿Estamos en Colab?
 try:
     import google.colab  # noqa
     _EN_COLAB = True
@@ -73,16 +69,14 @@ except ImportError:
 
 if not _EN_COLAB:
     print("Entorno local: no se clona nada (se usa data/ local).")
-elif not GITHUB_TOKEN.strip():
-    print("⚠️ Falta el token: edita GITHUB_TOKEN arriba y re-ejecuta esta celda.")
 else:
     import os, shutil, zipfile, subprocess
     REPO_PATH = "/content/data_caracterizacion"
     SPARSE_DIRS = ["data/_zip"]          # solo la carpeta del ZIP (clon mínimo)
     DATA_DIR = "/content/data_cp"
     ZIP_EN_REPO = os.path.join(REPO_PATH, "data", "_zip", "ciudad_paraiso_data.zip")
-    REPO_URL = (f"https://{GITHUB_TOKEN.strip()}@github.com/"
-                "j0rg3c45/data_caracterizacion_Ciudad_paraiso.git")
+    # Repo PÚBLICO -> clonado sin token (como en los notebooks ITT).
+    REPO_URL = "https://github.com/j0rg3c45/data_caracterizacion_Ciudad_paraiso.git"
     try:
         if os.path.exists(REPO_PATH):          # borra copia previa (evita datos viejos)
             shutil.rmtree(REPO_PATH)
@@ -97,7 +91,7 @@ else:
         print("Repo clonado (sparse) y datos listos en", DATA_DIR,
               "->", os.listdir(DATA_DIR))
     except subprocess.CalledProcessError as e:
-        print("Fallo el clonado:", e, "\\nRevisa el token (lectura del repo privado).")''')
+        print("Fallo el clonado:", e, "\\nVerifica tu conexión a internet.")''')
 
 # --- Celda 2: imports -------------------------------------------------------
 md("## Celda 2 · Imports y configuración")
@@ -165,8 +159,8 @@ if EN_COLAB:
         todo_ok = todo_ok and ok
         print(f"[{clave}]", ruta, "OK" if ok else "-> NO ENCONTRADO")
     if not todo_ok:
-        print("\\n⚠️ Faltan archivos. Vuelve a la Celda 1B, pega tu token en "
-              "GITHUB_TOKEN y ejecútala ANTES de esta celda.")
+        print("\\n⚠️ Faltan archivos. Ejecuta la Celda 1B (clonado del repo) "
+              "ANTES de esta celda.")
 else:
     # Local: localiza la carpeta data/ subiendo desde el cwd (sirve desde
     # notebooks/ o desde la raíz del proyecto).

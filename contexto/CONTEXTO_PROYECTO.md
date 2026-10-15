@@ -357,7 +357,13 @@ capa `Predios · semáforo de encuesta` (encendida por defecto). También se exp
 
 ### 9.1 Repositorio Git y versionado
 - **Repo remoto:** `https://github.com/j0rg3c45/data_caracterizacion_Ciudad_paraiso.git`
-  (origin, rama `main`). **Visibilidad: PRIVADO.**
+  (origin, rama `main`). **Visibilidad: PÚBLICO** (decisión del usuario).
+  - 🚨 **RIESGO VIGENTE DE PROTECCIÓN DE DATOS:** al ser público, el ZIP
+    `data/_zip/ciudad_paraiso_data.zip` con datos personales (documento, nombre, teléfono,
+    dirección de 746 personas) está **expuesto a cualquiera en internet** (viola la Ley 1581).
+    El usuario decidió continuar así por ahora. **Pendiente:** purgar ese ZIP del repo y su
+    historial, o anonimizar los insumos del mapa.
+  - Ventaja del repo público: Colab clona **sin token** (como los notebooks ITT).
 - **REGLA:** `data/` y `output/` **NO se versionan** (contienen datos personales).
   El `.gitignore` los excluye, junto con `*.xlsx/*.pdf/*.geojson/*.docx/*.rar/*.shp...`,
   caché y temporales. El repo lleva código, documentación y los modelos de referencia.
@@ -373,8 +379,7 @@ Mismo patrón que los notebooks ITT (`Itt_repos_cali`), adaptado a este repo **p
     --filter=blob:none --sparse <url> <path>` + `git sparse-checkout set data/_zip`.
   - Optimizaciones: `--depth 1` (sin historia), `--filter=blob:none` (blobs bajo demanda),
     `--sparse` (solo las carpetas de `SPARSE_DIRS`). Baja un clon mínimo, no todo el repo.
-  - Como el repo es privado, el token va embebido en la URL de clonado
-    (`https://<token>@github.com/...`). Es de lectura; el token se borra de la celda al terminar.
+  - El repo es **público**, así que el clone es **sin token** (URL directa), igual que en ITT.
   - El ZIP clonado se descomprime en `/content/data_cp/` y de ahí leen las celdas.
 - **La escritura al Git la hacemos SOLO desde local:** editar/ejecutar → `git add` (archivos
   específicos) → `git commit` → `git push origin main`. Nunca desde el notebook.
